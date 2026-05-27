@@ -220,7 +220,9 @@ var blank={
   frame_brand:"",frame_type:"",usage:"",
   lens_single:true,lens_progressive:false,lens_bifocal:false,lens_office:false,
   mat_cr39:false,mat_poly:false,mat_156:false,mat_160:false,mat_167:false,mat_other:"",
-  coat_ar:false,coat_scratch:false,coat_blue:false,coat_photo:false,coat_uv:false,coat_other:"",
+  coat_ar:false,coat_scratch:false,coat_blue:false,coat_photo:false,coat_uv:false,coat_mirror:false,coat_other:"",
+  frame_full:false,frame_groove:false,frame_drill:false,
+  usage_far:false,usage_near:false,usage_both:false,
   price_frame:"",price_lens:"",price_discount:"",price_deposit:"",price_balance:"",
   extra_note:"",photo1:"",photo2:""
 };
@@ -302,6 +304,10 @@ function mkCard(r){
   if(r.coat_blue)tags.push("Blue");
   if(r.coat_ar)tags.push("HMC");
   if(r.coat_photo)tags.push("Photo");
+  if(r.coat_mirror)tags.push("Mirror");
+  if(r.frame_full)tags.push("กรอบเต็ม");
+  if(r.frame_groove)tags.push("เซาะ");
+  if(r.frame_drill)tags.push("เจาะ");
   if(r.frame_brand)tags.push(r.frame_brand);
 
   var card=e("div","card");
@@ -404,9 +410,20 @@ function mkDetail(r){
   lensTypes.forEach(function(lt){var c=e("span","chip");c.textContent=lt;app(chips2,c);});
   var mats=[r.mat_156?"1.56":null,r.mat_160?"1.6":null,r.mat_167?"1.67":null,r.mat_cr39?"CR-39":null].filter(Boolean);
   mats.forEach(function(m){var c=e("span","chip g");c.textContent=m;app(chips2,c);});
-  var coats=[r.coat_ar?"HMC":null,r.coat_blue?"Blue":null,r.coat_photo?"Photo":null,r.coat_uv?"UV":null].filter(Boolean);
+  var coats=[r.coat_ar?"HMC/AR":null,r.coat_blue?"Blue Block":null,r.coat_photo?"Photo":null,r.coat_uv?"UV400":null,r.coat_scratch?"Scratch":null,r.coat_mirror?"Mirror":null].filter(Boolean);
   coats.forEach(function(c2){var c=e("span","chip");c.textContent=c2;app(chips2,c);});
-  app(lgrid,ditem("กรอบ",r.frame_brand),ditem("ราคาเลนส์",r.price_lens?("฿"+r.price_lens):""),ditem("ราคากรอบ",r.price_frame?("฿"+r.price_frame):""),ditem("มัดจำ",r.price_deposit?("฿"+r.price_deposit):""));
+  var frameType=[r.frame_full?"กรอบเต็ม":null,r.frame_groove?"เซาะ":null,r.frame_drill?"เจาะ":null].filter(Boolean).join(", ")||"—";
+  var usageType=[r.usage_far?"มองไกล":null,r.usage_near?"มองใกล้":null,r.usage_both?"2 ระยะ":null].filter(Boolean).join(", ")||"—";
+  app(lgrid,
+    ditem("กรอบ",r.frame_brand),
+    ditem("ชนิดกรอบ",frameType),
+    ditem("การใช้งาน",usageType),
+    ditem("Fitting Height R",(r.fitting_height_r?r.fitting_height_r+" มม.":"")),
+    ditem("Fitting Height L",(r.fitting_height_l?r.fitting_height_l+" มม.":"")),
+    ditem("ราคาเลนส์",r.price_lens?("฿"+r.price_lens):""),
+    ditem("ราคากรอบ",r.price_frame?("฿"+r.price_frame):""),
+    ditem("มัดจำ",r.price_deposit?("฿"+r.price_deposit):"")
+  );
   app(lsec,chips2,lgrid);
   if(r.extra_note){var enote=e("div");enote.style.cssText="margin-top:8px;font-size:13px;color:#555;";enote.textContent=r.extra_note;app(lsec,enote);}
   app(wrap,lsec);
@@ -434,7 +451,7 @@ function mkForm(){
     var fd=e("div","field");
     var lb=e("label");lb.textContent=lbl;
     var inp=e("input",null,{type:type,value:f[key]||""});
-    inp.addEventListener("input",function(){f[key]=this.value;});
+    inp.addEventListener("input",function(){f[key]=this.value;if(key==="name"){var sb=document.querySelector(".btn-save");if(sb)sb.disabled=!this.value.trim();}});
     app(fd,lb,inp);return fd;
   }
   function rxSec(num,title,prefix){
@@ -454,7 +471,7 @@ function mkForm(){
         var key=prefix+"_"+side.toLowerCase()+"_"+fld;
         var td=e("td");
         var inp=e("input","tin",{type:"text",value:f[key]||""});
-        inp.addEventListener("input",function(){f[key]=this.value;});
+        inp.addEventListener("input",function(){f[key]=this.value;if(key==="name"){var sb=document.querySelector(".btn-save");if(sb)sb.disabled=!this.value.trim();}});
         app(td,inp);app(tr,td);
       });
       app(tbody,tr);
@@ -472,11 +489,59 @@ function mkForm(){
   app(wrap,rxSec(2,"ค่าสายตาใหม่","cur"));
   app(wrap,rxSec(3,"ค่าสายตาเดิม","prev"));
 
-  // Section 4: Frame & Lens
-  var s4=mkSec(4,"กรอบและเลนส์");
+  // Section 4: Fitting Height
+  var s4fit=mkSec(4,"Fitting Height");
+  var fitrow=e("div","fit-row");
+  function fitField(lbl,key){
+    var fi=e("div","fit-item");
+    var lb=e("label");lb.textContent=lbl;
+    var inp2=e("input","fit-in",{type:"number",value:f[key]||"",step:"0.5"});
+    inp2.addEventListener("input",function(){f[key]=this.value;});
+    var un=e("span","fit-unit");un.textContent="มม.";
+    app(fi,lb,inp2,un);return fi;
+  }
+  app(fitrow,fitField("ขวา (R)","fitting_height_r"),fitField("ซ้าย (L)","fitting_height_l"));
+  app(s4fit,fitrow);app(wrap,s4fit);
+
+  // Section 5: Frame & Lens
+  var s4=mkSec(5,"กรอบและเลนส์");
   var fg4=e("div","fg");
-  app(fg4,field("ยี่ห้อกรอบ","frame_brand"),field("ชนิดกรอบ","frame_type"),field("การใช้งาน","usage"));
+  app(fg4,field("ยี่ห้อกรอบ","frame_brand"));
   app(s4,fg4);
+
+  // Frame type toggles
+  var fplbl=e("div","plabel");fplbl.textContent="ชนิดกรอบ";app(s4,fplbl);
+  var ftogrow=e("div","tog-row");
+  [["frame_full","กรอบเต็ม"],["frame_groove","เซาะ"],["frame_drill","เจาะ"]].forEach(function(item){
+    var btn=e("button","tog-btn"+(f[item[0]]?" on":""));
+    btn.textContent=item[1];
+    btn.addEventListener("click",function(){
+      f.frame_full=false;f.frame_groove=false;f.frame_drill=false;
+      f[item[0]]=true;
+      ftogrow.querySelectorAll(".tog-btn").forEach(function(b,i){
+        b.className="tog-btn"+([f.frame_full,f.frame_groove,f.frame_drill][i]?" on":"");
+      });
+    });
+    app(ftogrow,btn);
+  });
+  app(s4,ftogrow);
+
+  // Usage toggles
+  var uplbl=e("div","plabel");uplbl.textContent="การใช้งาน";uplbl.style.marginTop="10px";app(s4,uplbl);
+  var utogrow=e("div","tog-row");
+  [["usage_far","มองไกล"],["usage_near","มองใกล้"],["usage_both","2 ระยะ"]].forEach(function(item){
+    var btn=e("button","tog-btn"+(f[item[0]]?" on":""));
+    btn.textContent=item[1];
+    btn.addEventListener("click",function(){
+      f.usage_far=false;f.usage_near=false;f.usage_both=false;
+      f[item[0]]=true;
+      utogrow.querySelectorAll(".tog-btn").forEach(function(b,i){
+        b.className="tog-btn"+([f.usage_far,f.usage_near,f.usage_both][i]?" on":"");
+      });
+    });
+    app(utogrow,btn);
+  });
+  app(s4,utogrow);
 
   // Lens type toggles
   var plbl1=e("div","plabel");plbl1.textContent="ประเภทเลนส์";app(s4,plbl1);
@@ -488,7 +553,10 @@ function mkForm(){
       f[item[2]]=!f[item[2]];
       if(item[2]==="lens_single"&&f[item[2]]){f.lens_progressive=false;f.lens_bifocal=false;f.lens_office=false;}
       if(item[2]!=="lens_single"&&f[item[2]])f.lens_single=false;
-      go({form:f});
+      // Update button styles without re-render
+      var allBtns=this.parentNode.querySelectorAll(".tog-btn");
+      var keys2=["lens_single","lens_progressive","lens_bifocal","lens_office"];
+      allBtns.forEach(function(b,i){b.className="tog-btn"+(f[keys2[i]]?" on":"");});
     });
     app(togrow,btn);
   });
@@ -500,14 +568,25 @@ function mkForm(){
   [["CR-39","mat_cr39"],["Poly","mat_poly"],["1.56","mat_156"],["1.6","mat_160"],["1.67","mat_167"]].forEach(function(item){
     var btn=e("button","tog-btn"+(f[item[1]]?" on":""));
     btn.textContent=item[0];
-    btn.addEventListener("click",function(){f[item[1]]=!f[item[1]];go({form:f});});
+    btn.addEventListener("click",function(){f[item[1]]=!f[item[1]];this.className="tog-btn"+(f[item[1]]?" on":"");});
     app(matrow,btn);
   });
   app(s4,matrow);
+
+  // Coating
+  var cplbl=e("div","plabel");cplbl.textContent="Coating";cplbl.style.marginTop="10px";app(s4,cplbl);
+  var ctogrow=e("div","tog-row");
+  [["coat_ar","HMC/AR"],["coat_blue","Blue Block"],["coat_photo","Photochromic"],["coat_uv","UV400"],["coat_scratch","Scratch Resistant"],["coat_mirror","Mirror"]].forEach(function(item){
+    var btn=e("button","tog-btn"+(f[item[0]]?" on":""));
+    btn.textContent=item[1];
+    btn.addEventListener("click",function(){f[item[0]]=!f[item[0]];this.className="tog-btn"+(f[item[0]]?" on":"");});
+    app(ctogrow,btn);
+  });
+  app(s4,ctogrow);
   app(wrap,s4);
 
   // Section 5: Price
-  var s5=mkSec(5,"ราคา");
+  var s5=mkSec(6,"ราคา");
   var ptbl=e("table","price-tbl");
   [["ราคาเลนส์","price_lens"],["ราคากรอบ","price_frame"],["ส่วนลด","price_discount"],["มัดจำ","price_deposit"],["ยอดคงเหลือ","price_balance"]].forEach(function(item){
     var tr=e("tr");
@@ -524,6 +603,7 @@ function mkForm(){
   var noteLb=e("label");noteLb.textContent="หมายเหตุเพิ่มเติม";
   var noteTa=e("textarea",null,{rows:"3"});noteTa.value=f.extra_note||"";
   noteTa.addEventListener("input",function(){f.extra_note=this.value;});
+  // No re-render needed
   app(noteFd,noteLb,noteTa);app(s5,noteFd);app(wrap,s5);
 
   // Save row
@@ -721,6 +801,43 @@ function render(){
 }
 
 render();
+</script>
+
+<script>
+// Arrow key navigation for RX table inputs
+document.addEventListener("keydown", function(ev) {
+  var el = document.activeElement;
+  if (!el || el.tagName !== "INPUT") return;
+  var td = el.closest("td");
+  if (!td) return;
+  var tr = td.closest("tr");
+  if (!tr) return;
+  var tbl = tr.closest("table");
+  if (!tbl) return;
+
+  var allInputs = Array.from(tbl.querySelectorAll("input"));
+  var idx = allInputs.indexOf(el);
+  if (idx === -1) return;
+
+  var cols = tr.querySelectorAll("td input").length;
+  var next = null;
+
+  if (ev.key === "ArrowRight" || ev.key === "Tab") {
+    ev.preventDefault();
+    next = allInputs[idx + 1];
+  } else if (ev.key === "ArrowLeft") {
+    ev.preventDefault();
+    next = allInputs[idx - 1];
+  } else if (ev.key === "ArrowDown") {
+    ev.preventDefault();
+    next = allInputs[idx + cols];
+  } else if (ev.key === "ArrowUp") {
+    ev.preventDefault();
+    next = allInputs[idx - cols];
+  }
+
+  if (next) { next.focus(); next.select(); }
+});
 </script>
 </body>
 </html>
